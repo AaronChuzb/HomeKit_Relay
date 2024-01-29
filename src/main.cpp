@@ -15,7 +15,8 @@ extern "C" homekit_characteristic_t cha_switch_on;
 
 static uint32_t next_heap_millis = 0;
 
-#define PIN_RELAY 2
+#define PIN_RELAY 3
+#define PIN_LED 2
 
 int KEY_DOWN_COUNT    = 0; //按键按下计数
 int KEY_STATE_NOW     = 0; //按键目前状态
@@ -27,13 +28,16 @@ void cha_switch_on_setter(const homekit_value_t value) {
 	bool on = value.bool_value;
 	cha_switch_on.value.bool_value = on;	//sync the value
 	LOG_D("Switch: %s", on ? "ON" : "OFF");
-	digitalWrite(PIN_RELAY, on ? LOW : HIGH);
+	digitalWrite(PIN_RELAY, on ? HIGH : LOW);
+	digitalWrite(PIN_LED, on ? LOW : HIGH);
 }
 
 void my_homekit_setup() {
 	pinMode(PIN_RELAY, OUTPUT);
-  pinMode(3, INPUT_PULLUP);
-	digitalWrite(PIN_RELAY, HIGH);
+	pinMode(PIN_LED, OUTPUT);
+  pinMode(1, INPUT_PULLUP);
+	digitalWrite(PIN_RELAY, LOW);
+	digitalWrite(PIN_LED, HIGH); // 低电平点亮
 
 	//Add the .setter function to get the switch-event sent from iOS Home APP.
 	//The .setter should be added before arduino_homekit_setup.
@@ -63,7 +67,7 @@ void my_homekit_loop() {
 
 /* 按键扫描以及功能 */
 void keyScan() {
-  if(digitalRead(3)==0){
+  if(digitalRead(1)==0){
     KEY_DOWN_COUNT++;
     KEY_STATE_NOW = 1;
     if (KEY_DOWN_COUNT >= 10 && KEY_DOWN_COUNT < 100) { //按键1计数
@@ -80,12 +84,14 @@ void keyScan() {
     // DO SOME
     if(digitalRead(PIN_RELAY) == HIGH){
       digitalWrite(PIN_RELAY, LOW); // 这个led是低电平出发
-      bool switch_is_on = true;
+      digitalWrite(PIN_LED, HIGH); // 这个led是低电平出发
+      bool switch_is_on = false;
 	    cha_switch_on.value.bool_value = switch_is_on;
 	    homekit_characteristic_notify(&cha_switch_on, cha_switch_on.value);
     } else {
       digitalWrite(PIN_RELAY, HIGH);
-      bool switch_is_on = false;
+      digitalWrite(PIN_LED, LOW);
+      bool switch_is_on = true;
 	    cha_switch_on.value.bool_value = switch_is_on;
 	    homekit_characteristic_notify(&cha_switch_on, cha_switch_on.value);
     }
